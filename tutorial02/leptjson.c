@@ -66,10 +66,9 @@ static int lept_parse_null(lept_context* c, lept_value* v) {
 #endif
 
 static int lept_parse_number(lept_context* c, lept_value* v) {
-    char* end;
-    int iter;
     /* validate number check */
-    #if 1
+    #if 0
+    int iter;
     v->type = LEPT_NULL;
     iter = 0;
 
@@ -140,16 +139,46 @@ static int lept_parse_number(lept_context* c, lept_value* v) {
     if (c->json[iter] != '\0') {
         return LEPT_PARSE_INVALID_VALUE;
     }
-    #endif
 
 DONE:
-    v->n = strtod(c->json, &end);
-    if (c->json == end)
-        return LEPT_PARSE_INVALID_VALUE;
+    #endif
+
+    /* write after read answer */
+    v->type = LEPT_NULL;
+    char* p = c->json;
+    if (*p == '-') ++p;
+    if (*p == '0') ++p;
+    else {
+        if (!ISDIGIT1TO9(*p)) return LEPT_PARSE_INVALID_VALUE;
+        while (ISDIGIT(*p)) {
+            ++p;
+        }
+    }
+    if (*p == '.') {
+        ++p;
+        if (!ISDIGIT(*p)) return LEPT_PARSE_INVALID_VALUE;
+        while (ISDIGIT(*p)) {
+            ++p;
+        }
+    }
+
+    if (*p == 'e' || *p == 'E') {
+        ++p;
+        if (*p == '+' || *p == '-') {
+            ++p;
+        }
+        if (!ISDIGIT(*p)) return LEPT_PARSE_INVALID_VALUE;
+        while (ISDIGIT(*p)) {
+            ++p;
+        }
+    }
+
+    errno = 0;
+    v->n = strtod(c->json, NULL);
     if (errno == ERANGE && (v->n == HUGE_VAL || v->n == -HUGE_VAL)) {
         return LEPT_PARSE_NUMBER_TOO_BIG;
     }
-    c->json = end;
+    c->json = p;
     v->type = LEPT_NUMBER;
     return LEPT_PARSE_OK;
 }
