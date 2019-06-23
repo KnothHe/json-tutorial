@@ -135,6 +135,49 @@ static void test_parse_array() {
     EXPECT_EQ_INT(LEPT_ARRAY, lept_get_type(&v));
     EXPECT_EQ_SIZE_T(0, lept_get_array_size(&v));
     lept_free(&v);
+
+    lept_init(&v);
+    EXPECT_EQ_INT(LEPT_PARSE_OK, lept_parse(&v, "[ null , false , true , 123 , \"abc\" ]"));
+    EXPECT_EQ_INT(LEPT_ARRAY, lept_get_type(&v));
+    EXPECT_EQ_SIZE_T(5, lept_get_array_size(&v));
+    /* test element */
+    EXPECT_EQ_INT(LEPT_NULL, lept_get_type(lept_get_array_element(&v, 0)));
+    EXPECT_EQ_INT(LEPT_FALSE, lept_get_type(lept_get_array_element(&v, 1)));
+    EXPECT_EQ_INT(LEPT_TRUE, lept_get_type(lept_get_array_element(&v, 2)));
+    EXPECT_EQ_INT(LEPT_NUMBER, lept_get_type(lept_get_array_element(&v, 3)));
+    EXPECT_EQ_DOUBLE(123.0, lept_get_number(lept_get_array_element(&v, 3)));
+    EXPECT_EQ_INT(LEPT_STRING, lept_get_type(lept_get_array_element(&v, 4)));
+    EXPECT_EQ_STRING("abc", lept_get_string(lept_get_array_element(&v, 4)), \
+            lept_get_string_length(lept_get_array_element(&v, 4)));
+    lept_free(&v);
+
+    lept_init(&v);
+    EXPECT_EQ_INT(LEPT_PARSE_OK, lept_parse(&v, "[ [ ] , [ 0 ] , [ 0 , 1 ] , [ 0 , 1 , 2 ] ]"));
+    EXPECT_EQ_INT(LEPT_ARRAY, lept_get_type(&v));
+    EXPECT_EQ_SIZE_T(4, lept_get_array_size(&v));
+    lept_value *e0 = lept_get_array_element(&v, 0);
+    lept_value *e1 = lept_get_array_element(&v, 1);
+    lept_value *e2 = lept_get_array_element(&v, 2);
+    lept_value *e3 = lept_get_array_element(&v, 3);
+    EXPECT_EQ_INT(LEPT_ARRAY, lept_get_type(e0));
+    EXPECT_EQ_INT(0, lept_get_array_size(e0));
+    EXPECT_EQ_INT(LEPT_ARRAY, lept_get_type(e0));
+    EXPECT_EQ_SIZE_T(0, lept_get_array_size(e0));
+    EXPECT_EQ_INT(1, lept_get_array_size(e1));
+    EXPECT_EQ_SIZE_T(1, lept_get_array_size(e1));
+    EXPECT_EQ_DOUBLE(0.0, lept_get_number(lept_get_array_element(e1, 0)));
+    EXPECT_EQ_INT(LEPT_ARRAY, lept_get_type(e2));
+    EXPECT_EQ_INT(2, lept_get_array_size(e2));
+    EXPECT_EQ_SIZE_T(2, lept_get_array_size(e2));
+    EXPECT_EQ_DOUBLE(0.0, lept_get_number(lept_get_array_element(e2, 0)));
+    EXPECT_EQ_DOUBLE(1.0, lept_get_number(lept_get_array_element(e2, 1)));
+    EXPECT_EQ_INT(LEPT_ARRAY, lept_get_type(e3));
+    EXPECT_EQ_INT(3, lept_get_array_size(e3));
+    EXPECT_EQ_SIZE_T(3, lept_get_array_size(e3));
+    EXPECT_EQ_DOUBLE(0.0, lept_get_number(lept_get_array_element(e3, 0)));
+    EXPECT_EQ_DOUBLE(1.0, lept_get_number(lept_get_array_element(e3, 1)));
+    EXPECT_EQ_DOUBLE(2.0, lept_get_number(lept_get_array_element(e3, 2)));
+    lept_free(&v);
 }
 
 #define TEST_ERROR(error, json)\
@@ -167,7 +210,7 @@ static void test_parse_invalid_value() {
     TEST_ERROR(LEPT_PARSE_INVALID_VALUE, "nan");
 
     /* invalid value in array */
-#if 0
+#if 1
     TEST_ERROR(LEPT_PARSE_INVALID_VALUE, "[1,]");
     TEST_ERROR(LEPT_PARSE_INVALID_VALUE, "[\"a\", nul]");
 #endif
