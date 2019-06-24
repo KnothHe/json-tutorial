@@ -348,26 +348,34 @@ int lept_parse(lept_value* v, const char* json) {
 
 static void lept_stringify_string(lept_context* c, const char* s, size_t len) {
     /* ... */
-    size_t i;
-    PUTC(c, '"');
+    static const char HEX_DIGITS[16] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
+    size_t i, size;
+    char *p, *head;
+    assert(s != NULL);
+    p = head = lept_context_push(c, size = len * 6 + 2);
+    *p++ = '"';
     for (i = 0; i < len; i++) {
-        if (*s < 0x20 || *s == '"' || *s == '\\') {
-            switch (*s) {
-                case '"' :  PUTS(c, "\\\"", 2); break;
-                case '\\' : PUTS(c, "\\\\", 2); break;
-                case '\b' : PUTS(c, "\\b", 2);  break;
-                case '\f' : PUTS(c, "\\f", 2);  break;
-                case '\n' : PUTS(c, "\\n", 2);  break;
-                case '\r' : PUTS(c, "\\r", 2);  break;
-                case '\t' : PUTS(c, "\\t", 2);  break;
-                default: sprintf(lept_context_push(c, 6), "\\u00%02d", (int)*s); break;
-            }
-        } else {
-            PUTC(c, *s);
+        unsigned char ch = (unsigned char)(s[i]);
+        switch (ch) {
+            case '\\' :  *p++ = '\\'; *p++ = '\\'; break;
+            case '\"' :  *p++ = '\\'; *p++ = '"';  break;
+            case '\b' :  *p++ = '\\'; *p++ = 'b';  break;
+            case '\t' :  *p++ = '\\'; *p++ = 't';  break;
+            case '\r' :  *p++ = '\\'; *p++ = 'r';  break;
+            case '\f' :  *p++ = '\\'; *p++ = 'f';  break;
+            case '\n' :  *p++ = '\\'; *p++ = 'n';  break;
+            default:
+                if (ch < 0x20) {
+                    *p++ = '\\'; *p++ = 'u'; *p++ = '0'; *p++ = '0';
+                    *p++ = HEX_DIGITS[ ch >> 4 ];
+                    *p++ = HEX_DIGITS[ ch & 0xF];
+                } else {
+                    *p++ = ch;
+                }
         }
-        s++;
     }
-    PUTC(c, '"');
+    *p++ = '"';
+    c->top -= size - (p - head);
 }
 
 static void lept_stringify_value(lept_context* c, const lept_value* v) {
