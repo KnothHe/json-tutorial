@@ -238,7 +238,7 @@ static int lept_parse_array(lept_context* c, lept_value* v) {
 }
 
 static int lept_parse_object(lept_context* c, lept_value* v) {
-    char* k;
+    char* str;
     size_t i;
     size_t size;
     lept_member m;
@@ -257,21 +257,21 @@ static int lept_parse_object(lept_context* c, lept_value* v) {
     for (;;) {
         lept_init(&m.v);
         /* \DONE parse key to m.k, m.klen */
-        if (*c->json == '\"' &&
-        lept_parse_string_raw(c, &k, &m.klen) == LEPT_PARSE_OK) {
-            m.k = (char*)malloc(m.klen+1);
-            memcpy(m.k, k, m.klen);
-        } else {
+        if (*c->json != '"') {
             ret = LEPT_PARSE_MISS_KEY;
             break;
         }
+        if ((ret = lept_parse_string_raw(c, &str, &m.klen)) != LEPT_PARSE_OK) {
+            break;
+        }
+        memcpy((m.k = (char*)malloc(m.klen + 1)), str, m.klen);
+        m.k[m.klen] = '\0';
         /* \DONE parse ws colon ws */
         lept_parse_whitespace(c);
         if (*c->json == ':') {
             c->json++;
         } else {
             ret = LEPT_PARSE_MISS_COLON;
-            free(m.k);
             break;
         }
         lept_parse_whitespace(c);
@@ -299,12 +299,14 @@ static int lept_parse_object(lept_context* c, lept_value* v) {
         }
     }
     /* \todo Pop and free members on the stack */
+    free(m.k);
     for (i = 0; i < size; i++) {
         lept_member* member = (lept_member*)lept_context_pop(c, sizeof(lept_member));
         free(member->k);
         lept_free(&member->v);
     }
 
+    v->type = LEPT_NULL;
     return ret;
 }
 
@@ -354,7 +356,6 @@ void lept_free(lept_value* v) {
                 lept_free(&v->u.a.e[i]);
             free(v->u.a.e);
             break;
-#if 1
         case LEPT_OBJECT:
             for (i = 0; i < v->u.o.size; i++) {
                 lept_free(&v->u.o.m[i].v);
@@ -362,7 +363,6 @@ void lept_free(lept_value* v) {
             }
             free(v->u.o.m);
             break;
-#endif
         default: break;
     }
     v->type = LEPT_NULL;
